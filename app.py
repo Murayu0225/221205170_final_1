@@ -37,7 +37,6 @@ def check_user_func(username):
 
 
 # 新規登録処理
-# ニックネーム受け取りが必要
 def signup_func(username, nickname):
     conn = sqlite3.connect(dbname, isolation_level=None)
     cursor = conn.cursor()
