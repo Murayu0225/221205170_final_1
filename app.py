@@ -1,8 +1,5 @@
 from flask import Flask, jsonify, request
-import sqlite3
-import hashlib
-import random
-import string
+import sqlite3, hashlib, random, string, uuid
 
 
 dbname = './db/user.db'
@@ -20,27 +17,63 @@ def calculate_hash(password):
     hash_pass = hashlib.sha256((password + salt).encode('utf-8')).hexdigest()
     return hash_pass, salt
 
-# データ追加用
-# import uuid
-# name = "pict_test"
-# password = "pict_test_pass"
-# nickname = "[test user]pict"
-#
-# hash_pass, salt = calculate_hash(password)
-#
-# dbname = './db/user.db'
-# conn = sqlite3.connect(dbname, isolation_level=None)
-# cursor = conn.cursor()
-# sql = """INSERT INTO user VALUES(?, ?, ?, ?, ?)"""
-#
-# data = (str(uuid.uuid4()), str(name), str(hash_pass), str(nickname), str(salt))
-# cursor.execute(sql, data)
-# conn.commit()
-# ここまで
+
+# ユーザ名重複確認
+def check_user_func(username):
+    conn = sqlite3.connect(dbname, isolation_level=None)
+    cursor = conn.cursor()
+
+    sql = """SELECT * FROM user WHERE name = ?"""
+    data = (username,)
+    cursor.execute(sql, data)
+    res = cursor.fetchone()
+    conn.commit()
+
+    if res is None:
+        return "OK"
+    else:
+        result = {"status": 409}
+        return jsonify(result)
+
+
+# 新規登録処理
+# ニックネーム受け取りが必要
+def signup_func(username, nickname):
+    conn = sqlite3.connect(dbname, isolation_level=None)
+    cursor = conn.cursor()
+    salt = str(randomname(10))
+    sql = """INSERT INTO USER(id, name, user_nick_name, random_pass) VALUES(?, ?, ?, ?)"""
+    data = (str(uuid.uuid4()), username, nickname, salt,)
+    cursor.execute(sql, data)
+    conn.commit()
+    return jsonify({"status": 200, "salt": salt})
+
+
+# 新規登録ハッシュ処理
+def signup_auth_func(username, password):
+    conn = sqlite3.connect(dbname, isolation_level=None)
+    cursor = conn.cursor()
+    sql = """update user set pass = ? where name = ? """
+    data = (password, username,)
+    cursor.execute(sql, data)
+    res = cursor.fetchone()
+    conn.commit()
+    sql = """SELECT * FROM user WHERE name = ?"""
+    data = (username,)
+    cursor.execute(sql, data)
+    res2 = cursor.fetchone()
+    conn.commit()
+
+    if res2 is not None:
+        result = {"status": 200}
+        return jsonify(result)
+    else:
+        result = {"status": 401}
+        return jsonify(result)
 
 
 # ログイン処理
-def login_func(username):
+def signin_func(username):
     conn = sqlite3.connect(dbname, isolation_level=None)
     cursor = conn.cursor()
 
@@ -54,12 +87,12 @@ def login_func(username):
         result = {"status": 404}
         return jsonify(result)
     else:
-        result = {"status": 200, "salt": res[4], "token": "none"}
+        result = {"status": 200, "salt": res[4]}
         return jsonify(result)
 
 
-# ハッシュ処理
-def auth_func(username, password):
+# ログインハッシュ処理
+def signin_auth_func(username, password):
     conn = sqlite3.connect(dbname, isolation_level=None)
     cursor = conn.cursor()
 
@@ -85,19 +118,56 @@ def hello_world():
     return 'Auth System'
 
 
-@app.route('/login', methods=['GET'])
-def login():
-    username = request.args.get('u')
-    output = login_func(username)
-    return output
+@app.route('/signup', methods=['POST'])
+def signup():
+    try:
+        username = request.form.get('u')
+        user_conflict_check = check_user_func(username)
+        if user_conflict_check == "OK":
+            nickname = request.args.get('n')
+            return signup_func(username, nickname)
+        else:
+            output = {"status": 409}
+            return jsonify(output)
+    except Exception as e:
+        print(e)
+        return jsonify({"status": 500, "error": str(e)})
 
 
-@app.route('/auth', methods=['GET'])
-def auth():
-    username = request.args.get('u')
-    password = request.args.get('p')
-    output = auth_func(username, password)
-    return output
+@app.route('/signup/auth', methods=['GET, POST'])
+def signup_auth():
+    try:
+        username = request.form.get('u')
+        password = request.form.get('p')
+        output = signup_auth_func(username, password)
+        return output
+    except Exception as e:
+        print(e)
+        return jsonify({"status": 500, "error": str(e)})
+
+
+@app.route('/signin', methods=['POST'])
+def signin():
+    try:
+        username = request.form.get('u')
+        output = signin_func(username)
+        return output
+    except Exception as e:
+        print(e)
+        return jsonify({"status": 500, "error": str(e)})
+
+
+@app.route('/signin/auth', methods=['POST'])
+def signin_auth():
+    try:
+        username = request.form.get('u')
+        password = request.form.get('p')
+        output = signin_auth_func(username, password)
+        return output
+    except Exception as e:
+        print(e)
+        return jsonify({"status": 500, "error": str(e)})
+
 
 if __name__ == '__main__':
     app.run()
