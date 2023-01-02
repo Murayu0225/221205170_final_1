@@ -1,6 +1,10 @@
-from flask import Flask, jsonify, request
-import sqlite3, hashlib, random, string, uuid
+import hashlib
+import random
+import sqlite3
+import string
+import uuid
 
+from flask import Flask, jsonify, request
 
 dbname = './db/user.db'
 
