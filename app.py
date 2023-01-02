@@ -64,7 +64,7 @@ def signup_auth_func(username, password):
     conn.commit()
 
     if res2 is not None:
-        result = {"status": 200}
+        result = {"status": 200, "nickname": res2[3]}
         return jsonify(result)
     else:
         result = {"status": 401}
@@ -120,10 +120,10 @@ def hello_world():
 @app.route('/signup', methods=['POST'])
 def signup():
     try:
-        username = request.form.get('u')
+        username = request.json('u')
         user_conflict_check = check_user_func(username)
         if user_conflict_check == "OK":
-            nickname = request.args.get('n')
+            nickname = request.json['n']
             return signup_func(username, nickname)
         else:
             output = {"status": 409}
@@ -133,11 +133,11 @@ def signup():
         return jsonify({"status": 500, "error": str(e)})
 
 
-@app.route('/signup/auth', methods=['GET, POST'])
+@app.route('/signup/auth', methods=['POST'])
 def signup_auth():
     try:
-        username = request.form.get('u')
-        password = request.form.get('p')
+        username = request.json['u']
+        password = request.json['p']
         output = signup_auth_func(username, password)
         return output
     except Exception as e:
@@ -148,7 +148,7 @@ def signup_auth():
 @app.route('/signin', methods=['POST'])
 def signin():
     try:
-        username = request.form.get('u')
+        username = request.json['u']
         output = signin_func(username)
         return output
     except Exception as e:
@@ -159,8 +159,8 @@ def signin():
 @app.route('/signin/auth', methods=['POST'])
 def signin_auth():
     try:
-        username = request.form.get('u')
-        password = request.form.get('p')
+        username = request.json['u']
+        password = request.json['p']
         output = signin_auth_func(username, password)
         return output
     except Exception as e:
