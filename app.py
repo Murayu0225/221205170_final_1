@@ -120,7 +120,7 @@ def hello_world():
 @app.route('/signup', methods=['POST'])
 def signup():
     try:
-        username = request.json('u')
+        username = request.json['u']
         user_conflict_check = check_user_func(username)
         if user_conflict_check == "OK":
             nickname = request.json['n']
